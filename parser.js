@@ -7,10 +7,11 @@ const fs = require('fs')
 class Parser {
     state = {
         parseSettings: [
-            { category: "housing" ,url: "http://jerdesh.ru/birge_sdayu_komnatu_kojko_mesto", howManyPagesParse: 10},
-            { category: "job", url: "http://jerdesh.ru/birge_rabota/jumush_ish", howManyPagesParse: 10},
+            { category: "housing" ,url: "http://jerdesh.ru/birge_sdayu_komnatu_kojko_mesto", howManyPagesParse: 1},
+            { category: "job", url: "http://jerdesh.ru/birge_rabota/jumush_ish", howManyPagesParse: 1},
         ],
-        separator: "&@%"
+        separator: "&@%",
+        date: new Date().toLocaleString()
     }
 
     async asyncForEach(arrOrNum, callback) {
@@ -25,7 +26,7 @@ class Parser {
     promise(resolveCallback) {
         return new Promise((resolve, reject) => {
             this.setTimeout(() => {
-                console.log("ANOTHER ONE TRY MAKE REQUEST")
+                this.consoleLog("ANOTHER ONE TRY MAKE REQUEST")
                 resolve(resolveCallback())
             })
         })
@@ -53,7 +54,7 @@ class Parser {
             const {data} = await axios.get(url)
             return cheerio.load(data)
         } catch (err) {
-            console.log("ERROR WHEN GET HTML")
+            this.consoleLog("ERROR WHEN GET HTML")
             this.writeErrorFile(`${err} THIS ERROR WAS HAPPEN WHEN GET HTML`)
             return this.promise(() => this.getHTML(url))
 
@@ -106,7 +107,7 @@ class Parser {
     }
 
    async sendParsedData() {
-        console.log(`SEND result.csv FILE`)
+       this.consoleLog(`SEND result.csv FILE`)
         const form = new FormData
         form.append("file", fs.createReadStream("./result.csv"))
        try {
@@ -117,10 +118,10 @@ class Parser {
                    password: 'IvanAdmin'
                }
            })
-           console.log("PARSED DATA WAS SEND!")
+           this.consoleLog("PARSED DATA WAS SEND!")
            return true
        } catch (err) {
-           console.log("ERROR SEND PARSED DATA!")
+           this.consoleLog("ERROR SEND PARSED DATA!")
            this.writeErrorFile(`${err} THIS ERROR WAS HAPPEN WHEN SEND PARSED DATA`)
            return this.promise(() => this.sendParsedData())
        }
@@ -140,7 +141,13 @@ class Parser {
     }
 
     writeErrorFile(data) {
-        fs.writeFileSync("errorsLog.txt", data, "utf-8")
+        const { date } = this.state
+        fs.appendFileSync("errorsLog.txt", `[${date}] ${data}\n`, "utf-8")
+    }
+
+    consoleLog(text) {
+        const { date } = this.state
+        console.log(`[${date}] ${text}`)
     }
 
     async parse(html, lastAnnouncementLink) {
@@ -156,7 +163,7 @@ class Parser {
                 const linkElement = html(element).find("a.title")
                 const link = linkElement.attr("href")
                 if(lastAnnouncementLink === link) {
-                    console.log("FIND LAST ANNOUNCEMENT!")
+                    this.consoleLog("FIND LAST ANNOUNCEMENT!")
                     result = {...result, isLast: true}
                     return false
                 }
@@ -194,44 +201,44 @@ class Parser {
     }
 
    async start() {
-       console.log(`START`)
+       this.consoleLog(`START`)
        const { parseSettings } = this.state
        const announcements = []
        await this.asyncForEach(parseSettings, async (parseSetting) => {
             const {category, url, howManyPagesParse} = parseSetting
-           console.log(`START PARSING ${category} CATEGORY`)
+           this.consoleLog(`START PARSING ${category} CATEGORY`)
             const lastAnnouncementLink = this.getLastAnnouncementLink(category)
             await this.asyncForEach(howManyPagesParse, async (iter) => {
                 const pageNum = iter + 1
-                console.log(`PARSE ${url}/${pageNum}`)
+                this.consoleLog(`PARSE ${url}/${pageNum}`)
                 const html = await this.getHTML(`${url}/${pageNum}`)
                 const {announcements:announcementsByPage, isLast} = await this.parse(html, lastAnnouncementLink)
                 if(isLast) return false
                 announcements.push(announcementsByPage)
                 if(iter === 0 && announcementsByPage.length) {
-                    console.log(`WRITE ${category}LastLink.csv`)
+                    this.consoleLog(`WRITE ${category}LastLink.csv`)
                     const values = Object.values(announcementsByPage[0])
                     const preparedForWriteLastLink = values.join(this.state.separator)
                     this.writeFileSync(`${category}LastLink`, preparedForWriteLastLink)
                 }
-                console.log(`IN ${pageNum} PAGE WAS FIND ${announcementsByPage.length} ANNOUNCEMENTS`)
+                this.consoleLog(`IN ${pageNum} PAGE WAS FIND ${announcementsByPage.length} ANNOUNCEMENTS`)
             })
-                console.log(`FINISH PARSE ${category} CATEGORY`)
+           this.consoleLog(`FINISH PARSE ${category} CATEGORY`)
         } )
        if(announcements.length) {
-           console.log(`WRITE result.csv FILE`)
+           this.consoleLog(`WRITE result.csv FILE`)
            const preparedForAppendAnnouncements = this.prepareAnnouncementsForAppendFile(announcements)
            this.writeFileSync("result", preparedForAppendAnnouncements)
-           // this.sendParsedData()
+           this.sendParsedData()
        } else {
            this.writeFileSync("result", "")
-           console.log(`NEW ANNOUNCEMENTS IN ALL CATEGORIES IS NOT FIND`)
+           this.consoleLog(`NEW ANNOUNCEMENTS IN ALL CATEGORIES IS NOT FIND`)
        }
     }
 }
 const parser = new Parser
 parser.start()
 setInterval(() => {
-    console.log("START INTERVAL 30 MIN")
+    this.consoleLog("START INTERVAL 30 MIN")
     parser.start()
 }, 1800000)
