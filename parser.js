@@ -7,8 +7,8 @@ const fs = require('fs')
 class Parser {
     state = {
         parseSettings: [
-            { category: "housing" ,url: "http://jerdesh.ru/birge_sdayu_komnatu_kojko_mesto", howManyPagesParse: 1},
-            { category: "job", url: "http://jerdesh.ru/birge_rabota/jumush_ish", howManyPagesParse: 1},
+            { category: "housing" ,url: "http://jerdesh.ru/birge_sdayu_komnatu_kojko_mesto", howManyPagesParse: 10},
+            { category: "job", url: "http://jerdesh.ru/birge_rabota/jumush_ish", howManyPagesParse: 10},
         ],
         separator: "&@%",
         date: new Date().toLocaleString()
