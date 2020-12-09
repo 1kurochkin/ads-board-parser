@@ -239,6 +239,6 @@ class Parser {
 const parser = new Parser
 parser.start()
 setInterval(() => {
-    this.consoleLog("START INTERVAL 30 MIN")
+    parser.consoleLog("START INTERVAL 30 MIN")
     parser.start()
 }, 1800000)
