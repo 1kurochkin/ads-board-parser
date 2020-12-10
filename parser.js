@@ -11,7 +11,7 @@ class Parser {
             { category: "job", url: "http://jerdesh.ru/birge_rabota/jumush_ish", howManyPagesParse: 10},
         ],
         separator: "&@%",
-        date: new Date().toLocaleString()
+        date: () => new Date().toLocaleString()
     }
 
     async asyncForEach(arrOrNum, callback) {
@@ -142,12 +142,12 @@ class Parser {
 
     writeErrorFile(data) {
         const { date } = this.state
-        fs.appendFileSync("errorsLog.txt", `[${date}] ${data}\n`, "utf-8")
+        fs.appendFileSync("errorsLog.txt", `[${date()}] ${data}\n`, "utf-8")
     }
 
     consoleLog(text) {
         const { date } = this.state
-        console.log(`[${date}] ${text}`)
+        console.log(`[${date()}] ${text}`)
     }
 
     async parse(html, lastAnnouncementLink) {
