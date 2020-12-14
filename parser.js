@@ -2,6 +2,7 @@ const cheerio = require('cheerio')
 const axios = require('axios')
 const FormData = require('form-data');
 const fs = require('fs')
+const parse = require('csv-parse/lib/sync')
 
 
 class Parser {
@@ -11,7 +12,8 @@ class Parser {
             { category: "job", url: "http://jerdesh.ru/birge_rabota/jumush_ish", howManyPagesParse: 10},
         ],
         separator: "&@%",
-        date: () => new Date().toLocaleString()
+        date: () => new Date().toLocaleString(),
+        metroImageHashes: null
     }
 
     async asyncForEach(arrOrNum, callback) {
@@ -106,6 +108,11 @@ class Parser {
         }
     }
 
+    preparePhoto(photoLink) {
+       const number = parseInt(photoLink.match(/\d+/))
+        return this.state.metroImageHashes[number]
+    }
+
    async sendParsedData() {
        this.consoleLog(`SEND result.csv FILE`)
         const form = new FormData
@@ -145,6 +152,17 @@ class Parser {
         fs.appendFileSync("errorsLog.txt", `[${date()}] ${data}\n`, "utf-8")
     }
 
+    setMetroImageHashes() {
+        console.log("SET METRO IMAGE")
+        const csvFile = fs.readFileSync("./metroImageHash.csv")
+        const csvData = parse(csvFile, {columns: false, trim: true} ).flat()
+        this.state.metroImageHashes = csvData.reduce( (acc, el) => {
+            const [key, value] = el.split(this.state.separator)
+            acc[key] = value
+            return acc
+        }, {})
+    }
+
     consoleLog(text) {
         const { date } = this.state
         console.log(`[${date()}] ${text}`)
@@ -152,6 +170,7 @@ class Parser {
 
     async parse(html, lastAnnouncementLink) {
         try {
+
             const announcements = []
             let result = {announcements, isLast: false}
             html("ul.premium-list").remove()
@@ -171,7 +190,7 @@ class Parser {
                     const name = linkElement.text().replace(/\n/g, '').replace(/\s/g, ' ').trim()
                     const announcementPage = await this.getHTML(link)
                     const description = announcementPage("p", "#description").text().replace(/\n/g, '').replace(/\s/g, ' ').replace("Связаться с автором", "").trim()
-                    const photo = html(element).find("img").attr("src")
+                    const photo = this.preparePhoto(html(element).find("img").attr("src"))
                     const price = 0
                     const sellerPhone = html(element).find("span.protectedNumber").attr("title").trimEnd()
                     const divParent = html(element).find("div.listing-basicinfo").text().replace(/\n/g, '').replace(/\s+/g, ',').split(",")
@@ -202,7 +221,8 @@ class Parser {
 
    async start() {
        this.consoleLog(`START`)
-       const { parseSettings } = this.state
+       const { parseSettings, metroImageHashes } = this.state
+       !metroImageHashes && this.setMetroImageHashes()
        const announcements = []
        await this.asyncForEach(parseSettings, async (parseSetting) => {
             const {category, url, howManyPagesParse} = parseSetting

@@ -6,6 +6,7 @@
   "dependencies": {
     "axios": "^0.21.0",
     "cheerio": "^1.0.0-rc.3",
+    "csv": "^5.3.2",
     "form-data": "^3.0.0"
   },
   "devDependencies": {},
